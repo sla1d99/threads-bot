@@ -3,32 +3,20 @@ import time
 import schedule
 from dotenv import load_dotenv
 from openai import OpenAI
-from instagrapi import Client
+from playwright.sync_api import sync_playwright
 
 load_dotenv()
 
-# OpenAI
-client_ai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Instagram (Threads)
 IG_USERNAME = os.getenv("IG_USERNAME")
 IG_PASSWORD = os.getenv("IG_PASSWORD")
 
-cl = Client()
-
-try:
-    cl.login(IG_USERNAME, IG_PASSWORD)
-except Exception as e:
-    print("Login error:", e)
 
 def generate_post():
-    prompt = """
-    Напиши короткий лайфхак (до 180 символов).
-    Добавь эмодзи.
-    Сделай его вирусным.
-    """
+    prompt = "Напиши короткий лайфхак до 180 символов с эмодзи"
 
-    response = client_ai.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4.1-mini",
         messages=[{"role": "user", "content": prompt}]
     )
@@ -36,24 +24,57 @@ def generate_post():
     return response.choices[0].message.content.strip()
 
 
+def post_to_threads(text):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        # Открываем Threads
+        page.goto("https://www.threads.net/login")
+
+        time.sleep(5)
+
+        # Ввод логина
+        page.fill('input[name="username"]', IG_USERNAME)
+        page.fill('input[name="password"]', IG_PASSWORD)
+
+        page.click('button[type="submit"]')
+
+        time.sleep(10)
+
+        # Нажимаем "Create"
+        page.goto("https://www.threads.net/")
+
+        time.sleep(5)
+
+        # Поле ввода поста (может меняться!)
+        page.click('text="Start a thread"')
+
+        time.sleep(2)
+
+        page.fill('textarea', text)
+
+        time.sleep(2)
+
+        page.click('text="Post"')
+
+        print("✅ Posted:", text)
+
+        browser.close()
+
+
 def job():
     try:
         text = generate_post()
         print("POST:", text)
-
-        cl.thread_create(text)
-
-        print("✅ Posted")
-
+        post_to_threads(text)
     except Exception as e:
-        print("❌ Error:", e)
+        print("ERROR:", e)
 
 
-# тестовый пост
-print("🚀 Test post")
+print("🚀 TEST POST")
 job()
 
-# расписание (UTC!)
 schedule.every().day.at("08:00").do(job)
 schedule.every().day.at("16:00").do(job)
 
