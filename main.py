@@ -1,9 +1,16 @@
 import os
 import time
+import subprocess
 import schedule
 from dotenv import load_dotenv
 from openai import OpenAI
 from playwright.sync_api import sync_playwright
+
+# 🔥 фикс установки браузера
+try:
+    subprocess.run(["python", "-m", "playwright", "install", "chromium"], check=True)
+except Exception as e:
+    print("Playwright install error:", e)
 
 load_dotenv()
 
