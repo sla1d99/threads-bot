@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: threads-bot
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      npm install -g playwright
+      playwright install --with-deps
+    startCommand: python main.py
