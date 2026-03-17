@@ -1,0 +1,4 @@
+openai
+instagrapi
+schedule
+python-dotenv
